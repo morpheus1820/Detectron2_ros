@@ -1,7 +1,7 @@
-dr_spaam_ros:
+detectron2_ros:
   ros__parameters:
     input: "/camera/color/image_raw"
     detection_threshold: 0.75
-    config: "/home/user1/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
+    detectron2_config: "/home/user1/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
     model: "detectron2://COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl"
     visualization: True

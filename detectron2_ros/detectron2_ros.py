@@ -5,6 +5,7 @@ import rclpy
 import sys
 import threading
 import time
+import torch
 
 from rclpy.node import Node
 from rclpy.parameter import Parameter
@@ -32,24 +33,37 @@ class Detectron2node(Node):
         self._image_counter = 0
 
         self.cfg = get_cfg()
-        self.cfg.merge_from_file(self.get_parameter_or('config', "config.yaml"))
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.get_parameter_or('detection_threshold', 0.9) # set threshold for this model
-        self.cfg.MODEL.WEIGHTS = self.get_parameter_or('model', "model.ckpt")
+	
+        if not torch.cuda.is_available():
+            self.cfg.MODEL.DEVICE = "cpu"
+	
+        self.declare_parameter('detectron2_config', "config.yaml")
+        self.declare_parameter('model', "model.ckpt")	
+        self.declare_parameter('detection_threshold', 0.9)
+        self.declare_parameter('visualization', True)
+        self.declare_parameter('input', "/camera/color/image_raw")
+	
+        det_conf = str(self.get_parameter('detectron2_config').value)
+        #self.get_logger().info('DET CONF %s' % det_conf)
+        #self.get_logger().info('MODEL %s' % str(self.get_parameter_or('model', "model.ckpt").value) )
+        self.cfg.merge_from_file(det_conf)
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = float(self.get_parameter('detection_threshold').value) # set threshold for this model
+        self.cfg.MODEL.WEIGHTS = str(self.get_parameter('model').value)
         self.predictor = DefaultPredictor(self.cfg)
         self._class_names = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes", None)
 
-        self._visualization = self.get_parameter_or('visualization', True)
+        self._visualization = bool(self.get_parameter('visualization').value)
         self._result_pub = self.create_publisher(Result, 'result', 1)
         self._vis_pub = self.create_publisher(Image, 'visualization', 1)
-        self.input_topic = self.get_parameter_or("input", "/camera/color/image_raw")
+        self.input_topic = str(self.get_parameter("input").value)
         self._sub = self.create_subscription(Image, self.input_topic, self.callback_image, 1)
         self.start_time = time.time()
 
-        run()
+        self.run()
 
     def run(self):
         rate = 100
-        while not rclpy.is_shutdown():
+        while True:
             if self._msg_lock.acquire(False):
                 img_msg = self._last_msg
                 self._last_msg = None
@@ -156,6 +170,6 @@ def main(args=None):
 
 if __name__ == '__main__':
     try:
-        main(sys.argv)
+        main()
     except KeyboardInterrupt:
         sys.exit(1)
