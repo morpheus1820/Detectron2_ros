@@ -16,7 +16,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from detectron2.engine import DefaultPredictor
 from detectron2.utils.logger import setup_logger
 from detectron2.utils.visualizer import Visualizer
-from detectron2_ros.msg import Result
+from detectron2_ros_msgs.msg import Result
 from sensor_msgs.msg import Image, RegionOfInterest
 
 
@@ -32,9 +32,9 @@ class Detectron2node(Node):
         self._image_counter = 0
 
         self.cfg = get_cfg()
-        self.cfg.merge_from_file(self.load_param('~config'))
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.load_param('~detection_threshold') # set threshold for this model
-        self.cfg.MODEL.WEIGHTS = self.load_param('~model')
+        self.cfg.merge_from_file(self.get_parameter_or('config', "config.yaml"))
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.get_parameter_or('detection_threshold', 0.9) # set threshold for this model
+        self.cfg.MODEL.WEIGHTS = self.get_parameter_or('model', "model.ckpt")
         self.predictor = DefaultPredictor(self.cfg)
         self._class_names = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes", None)
 

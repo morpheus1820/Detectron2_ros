@@ -25,7 +25,12 @@
   <depend>rclpy</depend>
   <depend>message_generation</depend>
   <depend>sensor_msgs</depend>
+  <depend>detectron2_ros__msgs</depend>  
 
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+  
   <!--
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>std_msgs</exec_depend>
