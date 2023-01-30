@@ -69,8 +69,10 @@ class Detectron2node(Node):
                 img_msg = self._last_msg		
                 self._last_msg = None
                 self._msg_lock.release()
+                self.get_logger().info("if")
             else:
                 self._loop_rate.sleep()
+                self.get_logger().info("else")
                 continue
 
             if img_msg is not None:
@@ -94,9 +96,11 @@ class Detectron2node(Node):
                     v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
                     img = v.get_image()[:, :, ::-1]
 
-                    image_msg = self._bridge.cv2_to_imgmsg(img)
+                    image_msg = self._bridge.cv2_to_imgmsg(img, "bgr8")
                     self._vis_pub.publish(image_msg)
+                    self.get_logger().info("visualization image published")		    
 
+            rclpy.spin_once(self)
             self._loop_rate.sleep()
 
     def getResult(self, predictions):
