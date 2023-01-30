@@ -56,23 +56,29 @@ class Detectron2node(Node):
         self._result_pub = self.create_publisher(Result, 'result', 1)
         self._vis_pub = self.create_publisher(Image, 'visualization', 1)
         self.input_topic = str(self.get_parameter("input").value)
-        self._sub = self.create_subscription(Image, self.input_topic, self.callback_image, 1)
+        self.get_logger().info("input topic: %s" % self.input_topic)
+        self._sub = self.create_subscription(Image, str(self.input_topic), self.callback_image, 1)
         self.start_time = time.time()
+        self._loop_rate = self.create_rate(100, self.get_clock())
 
-        self.run()
 
     def run(self):
-        rate = 100
         while True:
+            rclpy.spin_once(self)
             if self._msg_lock.acquire(False):
                 img_msg = self._last_msg
+                if img_msg is None:
+                    self.get_logger().info("img_msg is None")			
                 self._last_msg = None
                 self._msg_lock.release()
+                self.get_logger().info("if")	
             else:
-                time.sleep(rate)
+                self._loop_rate.sleep()
+                self.get_logger().info("else")	
                 continue
 
             if img_msg is not None:
+                self.get_logger().info("img_msg not None")	
                 self._image_counter = self._image_counter + 1
                 #if (self._image_counter % 11) == 10:
                 #    rospy.loginfo("Images detected per second=%.2f",
@@ -80,10 +86,11 @@ class Detectron2node(Node):
 
                 np_image = self.convert_to_cv_image(img_msg)
 
+                self.get_logger().info("Predicting...")
                 outputs = self.predictor(np_image)
                 result = outputs["instances"].to("cpu")
                 result_msg = self.getResult(result)
-
+                self.get_logger().info("Predicted!")
                 self._result_pub.publish(result_msg)
 
                 # Visualize results
@@ -95,10 +102,9 @@ class Detectron2node(Node):
                     image_msg = self._bridge.cv2_to_imgmsg(img)
                     self._vis_pub.publish(image_msg)
 
-            time.sleep(rate)
+            self._loop_rate.sleep()
 
     def getResult(self, predictions):
-
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
 
         if predictions.has("pred_masks"):
@@ -149,14 +155,15 @@ class Detectron2node(Node):
                             dtype=encoding, buffer=image_msg.data)
 
         if image_msg.encoding.lower() == 'mono8':
-            cv_img = cv.cvtColor(cv_img, cv.COLOR_RGB2GRAY)
+            cv_img = cv2.cvtColor(cv_img, cv2.COLOR_RGB2GRAY)
         else:
-            cv_img = cv.cvtColor(cv_img, cv.COLOR_RGB2BGR)
+            cv_img = cv2.cvtColor(cv_img, cv2.COLOR_RGB2BGR)
 
         return cv_img
 
     def callback_image(self, msg):
         if self._msg_lock.acquire(False):
+            self.get_logger().info("callback_image successful")			
             self._last_msg = msg
             self._header = msg.header
             self._msg_lock.release()
@@ -165,8 +172,7 @@ class Detectron2node(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = Detectron2node()
-    rclpy.spin(node)
-    rclpy.shutdown()
+    node.run()
 
 if __name__ == '__main__':
     try:
