@@ -66,19 +66,14 @@ class Detectron2node(Node):
         while True:
             rclpy.spin_once(self)
             if self._msg_lock.acquire(False):
-                img_msg = self._last_msg
-                if img_msg is None:
-                    self.get_logger().info("img_msg is None")			
+                img_msg = self._last_msg		
                 self._last_msg = None
                 self._msg_lock.release()
-                self.get_logger().info("if")	
             else:
                 self._loop_rate.sleep()
-                self.get_logger().info("else")	
                 continue
 
             if img_msg is not None:
-                self.get_logger().info("img_msg not None")	
                 self._image_counter = self._image_counter + 1
                 #if (self._image_counter % 11) == 10:
                 #    rospy.loginfo("Images detected per second=%.2f",
@@ -114,9 +109,12 @@ class Detectron2node(Node):
 
         result_msg = Result()
         result_msg.header = self._header
-        result_msg.class_ids = predictions.pred_classes if predictions.has("pred_classes") else None
-        result_msg.class_names = np.array(self._class_names)[result_msg.class_ids.numpy()]
-        result_msg.scores = predictions.scores if predictions.has("scores") else None
+        if not predictions.has("pred_classes"):
+            self.get_logger().info("buuuuuuuh")
+            result_msg.class_ids = None
+        result_msg.class_ids = [int(x) for x  in predictions.pred_classes] if predictions.has("pred_classes") else None
+        result_msg.class_names = [str(np.array(self._class_names)[x]) for x in result_msg.class_ids]
+        result_msg.scores = [float(x) for x in predictions.scores] if predictions.has("scores") else None
 
         for i, (x1, y1, x2, y2) in enumerate(boxes):
             mask = np.zeros(masks[i].shape, dtype="uint8")
@@ -125,10 +123,10 @@ class Detectron2node(Node):
             result_msg.masks.append(mask)
 
             box = RegionOfInterest()
-            box.x_offset = np.uint32(x1)
-            box.y_offset = np.uint32(y1)
-            box.height = np.uint32(y2 - y1)
-            box.width = np.uint32(x2 - x1)
+            box.x_offset = int(x1)
+            box.y_offset = int(y1)
+            box.height = int(y2 - y1)
+            box.width = int(x2 - x1)
             result_msg.boxes.append(box)
 
         return result_msg
