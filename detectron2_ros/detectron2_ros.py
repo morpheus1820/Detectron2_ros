@@ -69,10 +69,8 @@ class Detectron2node(Node):
                 img_msg = self._last_msg		
                 self._last_msg = None
                 self._msg_lock.release()
-                self.get_logger().info("if")
             else:
                 self._loop_rate.sleep()
-                self.get_logger().info("else")
                 continue
 
             if img_msg is not None:
@@ -83,11 +81,9 @@ class Detectron2node(Node):
 
                 np_image = self.convert_to_cv_image(img_msg)
 
-                self.get_logger().info("Predicting...")
                 outputs = self.predictor(np_image)
                 result = outputs["instances"].to("cpu")
                 result_msg = self.getResult(result)
-                self.get_logger().info("Predicted!")
                 self._result_pub.publish(result_msg)
 
                 # Visualize results
@@ -98,7 +94,6 @@ class Detectron2node(Node):
 
                     image_msg = self._bridge.cv2_to_imgmsg(img, "bgr8")
                     self._vis_pub.publish(image_msg)
-                    self.get_logger().info("visualization image published")		    
 
             rclpy.spin_once(self)
             self._loop_rate.sleep()
@@ -114,7 +109,6 @@ class Detectron2node(Node):
         result_msg = Result()
         result_msg.header = self._header
         if not predictions.has("pred_classes"):
-            self.get_logger().info("buuuuuuuh")
             result_msg.class_ids = None
         result_msg.class_ids = [int(x) for x  in predictions.pred_classes] if predictions.has("pred_classes") else None
         result_msg.class_names = [str(np.array(self._class_names)[x]) for x in result_msg.class_ids]
@@ -165,7 +159,6 @@ class Detectron2node(Node):
 
     def callback_image(self, msg):
         if self._msg_lock.acquire(False):
-            self.get_logger().info("callback_image successful")			
             self._last_msg = msg
             self._header = msg.header
             self._msg_lock.release()
